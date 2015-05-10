@@ -1,55 +1,59 @@
 var gulp = require('gulp');
-var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
-var react = require('gulp-react');
 var htmlreplace = require('gulp-html-replace');
+var source = require('vinyl-source-stream');
+var browserify = require('browserify');
+var watchify = require('watchify');
+var reactify = require('reactify');
+var streamify = require('gulp-streamify');
 
-// Path's to various places in the build process
 var path = {
     HTML: 'src/index.html',
-    ALL: ['src/js/*.js', 'src/js/**/*.js', 'src/index.html'],
-    JS: ['src/js/*.js', 'src/js/**/*.js'],
     MINIFIED_OUT: 'build.min.js',
-    DEST_SRC: 'dist/src',
+    OUT: 'build.js',
+    DEST: 'dist',
     DEST_BUILD: 'dist/build',
-    DEST: 'dist'
+    DEST_SRC: 'dist/src',
+    ENTRY_POINT: './src/js/App.js'
 };
 
-//********** Build for Dev ****************************
-// 1. Transform JSX into regular Javascript in this task
-gulp.task('transform', function(){
-   gulp.src(path.JS)
-        .pipe(react())
-        .pipe(gulp.dest(path.DEST_SRC));
-});
-
-// 2. Copy the existing index.html into our dist folder
 gulp.task('copy', function(){
-   gulp.src(path.HTML)
+    gulp.src(path.HTML)
         .pipe(gulp.dest(path.DEST));
 });
 
-// 3. Watch for changes to index.html or JS files in dev
-//    run steps 1 & 2 if changes occur to those files
-gulp.task('watch', function(){
-   gulp.watch(path.ALL, ['transform', 'copy']);
+gulp.task('watch', function() {
+    gulp.watch(path.HTML, ['copy']);
+
+    var watcher  = watchify(browserify({
+        entries: [path.ENTRY_POINT],
+        transform: [reactify],
+        debug: true,
+        cache: {}, packageCache: {}, fullPaths: true
+    }));
+
+    return watcher.on('update', function () {
+        watcher.bundle()
+            .pipe(source(path.OUT))
+            .pipe(gulp.dest(path.DEST_SRC))
+        console.log('Updated');
+    })
+        .bundle()
+        .pipe(source(path.OUT))
+        .pipe(gulp.dest(path.DEST_SRC));
 });
 
-// Default command to run when we enter gulp on the CLI
-gulp.task('default', ['watch']);
-
-//********** Build for Production ****************************
-// 1. Concatenate all of our JS files together and minify them
 gulp.task('build', function(){
-    gulp.src(path.JS)
-        .pipe(react())
-        .pipe(concat(path.MINIFIED_OUT))
-        .pipe(uglify(path.MINIFIED_OUT))
+    browserify({
+        entries: [path.ENTRY_POINT],
+        transform: [reactify],
+    })
+        .bundle()
+        .pipe(source(path.MINIFIED_OUT))
+        .pipe(streamify(uglify(path.MINIFIED_OUT)))
         .pipe(gulp.dest(path.DEST_BUILD));
 });
 
-// 2. Replace our JS file references wrapped in <!--build:js-->/
-//    <!--endbuild--> with a reference to our single minified file
 gulp.task('replaceHTML', function(){
     gulp.src(path.HTML)
         .pipe(htmlreplace({
@@ -58,4 +62,8 @@ gulp.task('replaceHTML', function(){
         .pipe(gulp.dest(path.DEST));
 });
 
+// prod tasks
 gulp.task('production', ['replaceHTML', 'build']);
+
+// dev tasks
+gulp.task('default', ['watch']);
