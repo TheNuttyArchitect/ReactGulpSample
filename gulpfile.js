@@ -10,7 +10,7 @@ var path = {
     ALL: ['src/js/*.js', 'src/js/**/*.js', 'src/index.html'],
     JS: ['src/js/*.js', 'src/js/**/*.js'],
     MINIFIED_OUT: 'build.min.js',
-    DESC_SRC: 'dist/src',
+    DEST_SRC: 'dist/src',
     DEST_BUILD: 'dist/build',
     DEST: 'dist'
 };
@@ -19,7 +19,7 @@ var path = {
 gulp.task('transform', function(){
    gulp.src(path.JS)
         .pipe(react())
-        .pipe(gulp.dest(path.DESC_SRC));
+        .pipe(gulp.dest(path.DEST_SRC));
 });
 
 // 2. Copy the existing index.html into our dist folder
@@ -33,3 +33,6 @@ gulp.task('copy', function(){
 gulp.task('watch', function(){
    gulp.watch(path.ALL, ['transform', 'copy']);
 });
+
+// Default command to run when we enter gulp on the CLI
+gulp.task('default', ['watch']);
