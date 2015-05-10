@@ -2,7 +2,7 @@ var gulp = require('gulp');
 var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var react = require('gulp-react');
-var html = require('gulp-html-replace');
+var htmlreplace = require('gulp-html-replace');
 
 // Path's to various places in the build process
 var path = {
@@ -15,6 +15,7 @@ var path = {
     DEST: 'dist'
 };
 
+//********** Build for Dev ****************************
 // 1. Transform JSX into regular Javascript in this task
 gulp.task('transform', function(){
    gulp.src(path.JS)
@@ -36,3 +37,25 @@ gulp.task('watch', function(){
 
 // Default command to run when we enter gulp on the CLI
 gulp.task('default', ['watch']);
+
+//********** Build for Production ****************************
+// 1. Concatenate all of our JS files together and minify them
+gulp.task('build', function(){
+    gulp.src(path.JS)
+        .pipe(react())
+        .pipe(concat(path.MINIFIED_OUT))
+        .pipe(uglify(path.MINIFIED_OUT))
+        .pipe(gulp.dest(path.DEST_BUILD));
+});
+
+// 2. Replace our JS file references wrapped in <!--build:js-->/
+//    <!--endbuild--> with a reference to our single minified file
+gulp.task('replaceHTML', function(){
+    gulp.src(path.HTML)
+        .pipe(htmlreplace({
+            'js': 'build/' + path.MINIFIED_OUT
+        }))
+        .pipe(gulp.dest(path.DEST));
+});
+
+gulp.task('production', ['replaceHTML', 'build']);
